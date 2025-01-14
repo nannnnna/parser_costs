@@ -1,0 +1,16 @@
+{
+  "name": "@boxexchanger-plugins/parser-bybit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo 0"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "bignumber": "^1.1.0",
+    "bignumber.js": "^9.1.2"
+  }
+}

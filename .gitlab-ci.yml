@@ -1,0 +1,21 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE != 'merge_request_event'
+
+image: node:20-alpine
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  variables:
+    GROUP_NAME: "@boxexchanger-plugins"
+  script:
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - echo ${GROUP_NAME}:registry=https://git.boxexchanger.net/api/v4/packages/npm/ >> .npmrc
+    - npm pkg set publishConfig.${GROUP_NAME}:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - if [ "$CI_COMMIT_REF_SLUG" = "main" ]; then npm version --no-git-tag-version $(npm view ${GROUP_NAME}/${CI_PROJECT_NAME}@latest version); else npm version --no-git-tag-version $(npm view ${GROUP_NAME}/${CI_PROJECT_NAME}@$CI_COMMIT_REF_SLUG version); fi
+    - if [ "$CI_COMMIT_REF_SLUG" = "main" ]; then npm version --no-git-tag-version patch; else npm version --no-git-tag-version prerelease -preid $CI_COMMIT_REF_SLUG; fi
+    - if [ "$CI_COMMIT_REF_SLUG" = "main" ]; then npm publish --tag latest; else npm publish --tag $CI_COMMIT_REF_SLUG; fi
