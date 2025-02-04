@@ -4,11 +4,9 @@ const crypto = require("crypto");
 
 const id_key = __dirname.split("/").slice(-1)[0];
 
-class Bybit {
+class Bybit1337 {
   constructor(config, options) {
     this.id_key = id_key;
-
-    // Сохраняем amount и orderNum для каждого банка
     this.amountTCSBRUB = config.extra.amountTCSBRUB;
     this.orderNumTCSBRUB = config.extra.orderNumTCSBRUB;
     this.amountSBERRUB = config.extra.amountSBERRUB;
@@ -41,35 +39,38 @@ class Bybit {
     for (const payment of paymentIds) {
       const paymentValue = payment.value.toString();
       
-      // Выполняем отдельный запрос для каждого payment с соответствующими amount и orderNum
       const symbolRates = await this.ApiRequestRate(paymentValue, payment.amount, payment.orderNum);
-      console.log(paymentValue, payment.amount, payment.orderNum);
+      // console.log(paymentValue, payment.amount, payment.orderNum);
       const paymentToMap = Object.fromEntries(paymentIds.map(payment => [payment.value, payment.id]));
 
-      if (!symbolRates || !symbolRates.result || !symbolRates.result.items || symbolRates.error_code === '500') continue;
+      if (!symbolRates || !symbolRates.result || !symbolRates.result.items || symbolRates.error_code === '500') {
+        console.log('if');
+        continue;
+      }
 
       const filteredItems = symbolRates.result.items.filter(item => 
-          item.isOnline === true && item.orderNum >= payment.orderNum
+          item.isOnline === true && item.recentOrderNum >= payment.orderNum
       );
 
       const rate = filteredItems.find(item => 
-          item.payments && item.payments.toString() === paymentValue
-      );
+        item.payments && item.payments.includes(paymentValue) 
+    );
+      // console.log(rate.length);
 
       if (rate) {
-        console.log("Bybit p2p -> Price:", rate.price, paymentToMap[rate.payments])
+        console.log("Bybit p2p -> Price:", rate.price, paymentToMap[paymentValue]);
 
           const inverse = new BigNumber(1);
           const ask = new BigNumber(rate.price);
 
           const r1 = {
               from: "USDTRC20",
-              to: paymentToMap[rate.payments],
+              to: paymentToMap[paymentValue],
               buy: ask.toString(),
           };
 
           const r2 = {
-              from: paymentToMap[rate.payments],
+              from: paymentToMap[paymentValue],
               to: "USDTRC20",
               buy: inverse.div(ask).toString(),
           };
@@ -85,6 +86,8 @@ class Bybit {
           }
 
           rates_result.push(r1, r2);
+      } else {
+        console.log('no rate');
       }
     }
 
@@ -100,7 +103,7 @@ class Bybit {
         side: "0",
         size: "100",
         page: "1",
-        amount: amount.toString(), // Используем amount из конфигурации
+        amount: amount.toString(), 
         authMaker: true,
         canTrade: false,
         itemRegion: 2
@@ -113,11 +116,15 @@ class Bybit {
                 Accept: "application/json",
             },
         })
-        .then((res) => res.data)
-        .catch((err) =>
-            console.error("{Parser} Bybit -> Error fetching rate : ", err)
-        );
+        .then((res) => {
+            console.log(`Response Status: ${res.status}`); 
+            return res.data; 
+        })
+        .catch((err) => {
+            console.error("{Parser} Bybit -> Error fetching rate : ", err);
+            return { status: err.response ? err.response.status : 500, data: null }; 
+        });
   }
 }
 
-module.exports = Bybit;
+module.exports = Bybit1337;

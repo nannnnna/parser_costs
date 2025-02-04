@@ -1,4 +1,4 @@
-## bybit parser 
+## bybit1337 parser 
 ```
-@boxexchanger-plugins/parser-bybit
+@boxexchanger-plugins/parser-bybit1337
 ```
